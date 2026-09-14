@@ -1,6 +1,6 @@
 # Identitas
 Nama                : Wati Rustati
-NIM                 : H!D024007
+NIM                 : H1D024007
 Shift Awal & Baru   : F
 
 # Screenshot

@@ -9,5 +9,6 @@ Shift Awal & Baru   : F
 ![Tentang Jualan](screenshot/HubungiKamiScreen.jpeg)
 
 # Display Pertemuan 3
+![Tentang jualan](screenshot/pert3.png)
 # Display Pertemuan 4
 # Display Pertemuan 5

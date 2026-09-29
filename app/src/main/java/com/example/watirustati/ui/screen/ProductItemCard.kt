@@ -36,6 +36,7 @@ fun ProductItemCard(product: Product, onClick: () -> Unit) {
             .padding(8.dp)
             .fillMaxWidth()
             .clickable { onClick() },
+        shape = RoundedCornerShape(16.dp), // sudut kartu ikut tumpul
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
@@ -51,7 +52,7 @@ fun ProductItemCard(product: Product, onClick: () -> Unit) {
                     modifier = Modifier
                         .fillMaxWidth()
                         .aspectRatio(1f)
-                        .clip(RoundedCornerShape(8.dp))
+                        .clip(RoundedCornerShape(16.dp)) // diperbesar dari 8.dp -> 16.dp
                         .background(Color.White),
                 )
 

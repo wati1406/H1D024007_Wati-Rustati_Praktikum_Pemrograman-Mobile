@@ -1,6 +1,5 @@
 package com.example.watirustati.ui.screen
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -20,40 +19,47 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
 import com.example.watirustati.R
-import com.example.watirustati.data.dummy.DummyData
+import com.example.watirustati.data.model.Category
 import com.example.watirustati.data.model.Product
+import com.example.watirustati.util.JualanConstants
 
 @Composable
 fun ProductItemCard(product: Product, onClick: () -> Unit) {
     Card(
         modifier = Modifier
-            .padding(8.dp)
+            .padding(4.dp)
             .fillMaxWidth()
             .clickable { onClick() },
-        shape = RoundedCornerShape(16.dp), // sudut kartu ikut tumpul
+        shape = RoundedCornerShape(8.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            val imageRes = if (product.img == "dummy_product") R.drawable.dummy_product else R.drawable.dummy_product
+        Column(modifier = Modifier.padding(8.dp)) {
+            val imageModel: Any = if (product.img == "dummy_product") {
+                R.drawable.dummy_product
+            } else {
+                JualanConstants.BASE_URL + "img/${product.img}"
+            }
 
             Box(
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Image(
-                    painter = painterResource(id = imageRes),
+                AsyncImage(
+                    model = imageModel,
                     contentDescription = product.name,
                     modifier = Modifier
                         .fillMaxWidth()
                         .aspectRatio(1f)
-                        .clip(RoundedCornerShape(16.dp)) // diperbesar dari 8.dp -> 16.dp
+                        .clip(RoundedCornerShape(8.dp))
                         .background(Color.White),
+                    contentScale = ContentScale.Fit
                 )
 
                 if (product.category != null) {
@@ -97,5 +103,20 @@ fun ProductItemCard(product: Product, onClick: () -> Unit) {
 @Preview(showBackground = true)
 @Composable
 fun PreviewProduct() {
-    ProductItemCard(product = DummyData.products[0], onClick = {})
+    val sampleProduct = Product(
+        id = 1,
+        name = "Kripik Singkong",
+        price = 15000.0,
+        category_id = 1,
+        img = "dummy_product",
+        description = "Kripik gurih",
+        stock = 50,
+        category = Category(
+            id = 1,
+            name = "Makanan",
+            description = "Aneka makanan ringan",
+            products_count = 4
+        )
+    )
+    ProductItemCard(product = sampleProduct, onClick = {})
 }

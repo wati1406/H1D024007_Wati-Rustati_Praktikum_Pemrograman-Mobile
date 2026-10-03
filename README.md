@@ -15,3 +15,5 @@ Shift Awal & Baru   : F
 ![Tentang jualan](screenshot/daftarproduk1.png)
 ![Tentang jualan](screenshot/HubungiKami1.jpeg)
 # Display Pertemuan 5
+![Tentang jualan](screenshot/DtailProdukAPI.jpeg)
+![Tentang jualan](screenshot/DaftarProdukAPI.jpeg)

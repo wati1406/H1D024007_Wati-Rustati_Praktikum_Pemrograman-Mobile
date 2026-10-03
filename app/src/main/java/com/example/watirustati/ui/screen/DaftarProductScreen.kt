@@ -10,7 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items as lazyRowItems
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -32,7 +32,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -44,61 +44,75 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import com.example.watirustati.data.dummy.DummyData
 import com.example.watirustati.data.model.Category
 import com.example.watirustati.data.model.Product
 import com.example.watirustati.ui.theme.JualanTheme
-import kotlinx.coroutines.delay
+import com.example.watirustati.ui.viewmodel.ProductUiState
+import com.example.watirustati.ui.viewmodel.ProductViewModel
 
-// Hijau untuk TopAppBar, border, dan loading (sesuai contoh)
 private val GreenBar = Color(0xFF4CAF50)
 
-// Langkah 2, 10: function state (menyimpan data) yang memanggil StatelessDaftarProduct
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DaftarProductScreen(navController: NavController? = null) {
-    var selectedCategoryId by rememberSaveable {
-        mutableStateOf(value = DummyData.categories.firstOrNull()?.id)
-    }
-    var searchQuery by rememberSaveable { mutableStateOf(value = "") }
-    var isLoading by remember { mutableStateOf(value = false) }
-    var filteredProducts by remember { mutableStateOf(value = emptyList<Product>()) }
+fun DaftarProductScreen(
+    navController: NavController? = null,
+    viewModel: ProductViewModel
+) {
+    var selectedCategoryId by rememberSaveable { mutableStateOf<Int?>(null) }
+    val uiState by viewModel.uiState.collectAsState()
+    val searchQuery by rememberSaveable { mutableStateOf("") }
 
-    LaunchedEffect(key1 = selectedCategoryId, key2 = searchQuery) {
-        isLoading = true
-
-        delay(timeMillis = 1000)
-
-        val filteredByCategory = if (selectedCategoryId != null) {
-            DummyData.products.filter { it.category_id == selectedCategoryId }
-        } else DummyData.products
-
-        filteredProducts = if (searchQuery.isBlank()) {
-            filteredByCategory
-        } else {
-            filteredByCategory.filter { it.name.contains(other = searchQuery, ignoreCase = true) }
+    when (val state = uiState) {
+        is ProductUiState.Loading -> {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(color = GreenBar)
+            }
         }
 
-        isLoading = false
-    }
-
-    StatelessDaftarProduct(
-        categories = DummyData.categories,
-        selectedCategoryId = selectedCategoryId,
-        onCategorySelected = { selectedCategoryId = it },
-        searchQuery = searchQuery,
-        onSearchQueryChange = { searchQuery = it },
-        isLoading = isLoading,
-        products = filteredProducts,
-        onProductClick = { product ->
-            navController?.navigate("detail/${product.id}")
-        },
-        onContactUsClick = {
-            navController?.navigate("hubungi_kami")
+        is ProductUiState.Error -> {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text("Error: ${state.message}", color = MaterialTheme.colorScheme.error)
+            }
         }
-    )
+
+        is ProductUiState.Success -> {
+            if (selectedCategoryId == null && state.categories.isNotEmpty()) {
+                selectedCategoryId = state.categories.first().id
+            }
+
+            val filteredByCategory = if (selectedCategoryId != null) {
+                state.products.filter { it.category_id == selectedCategoryId }
+            } else {
+                state.products
+            }
+
+            val filteredProducts = if (searchQuery.isBlank()) {
+                filteredByCategory
+            } else {
+                filteredByCategory.filter {
+                    it.name.contains(other = searchQuery, ignoreCase = true)
+                }
+            }
+
+            StatelessDaftarProduct(
+                categories = state.categories,
+                selectedCategoryId = selectedCategoryId,
+                onCategorySelected = { selectedCategoryId = it },
+                searchQuery = searchQuery,
+                onSearchQueryChange = { /* handled di state hoisting */ },
+                isLoading = false,
+                products = filteredProducts,
+                onProductClick = { product ->
+                    navController?.navigate("detail/${product.id}")
+                },
+                onContactUsClick = {
+                    navController?.navigate("hubungi_kami")
+                }
+            )
+        }
+    }
 }
 
-// Langkah 3-9: function stateless (hanya menampilkan UI)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StatelessDaftarProduct(
@@ -112,8 +126,7 @@ fun StatelessDaftarProduct(
     onProductClick: (Product) -> Unit,
     onContactUsClick: () -> Unit
 ) {
-    // Status buka/tutup menu titik tiga
-    var expanded by remember { mutableStateOf(value = false) }
+    var expanded by remember { mutableStateOf(false) }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -124,16 +137,13 @@ fun StatelessDaftarProduct(
                     IconButton(onClick = { }) {
                         Icon(Icons.Default.ShoppingCart, contentDescription = "Keranjang")
                     }
-
                     Box {
                         IconButton(onClick = { expanded = true }) {
                             Icon(
                                 imageVector = Icons.Default.MoreVert,
-                                contentDescription = "Menu",
-                                tint = MaterialTheme.colorScheme.onPrimary
+                                contentDescription = "Menu"
                             )
                         }
-
                         DropdownMenu(
                             expanded = expanded,
                             onDismissRequest = { expanded = false }
@@ -176,29 +186,25 @@ fun StatelessDaftarProduct(
                     .padding(horizontal = 16.dp, vertical = 8.dp),
                 singleLine = true,
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = GreenBar,
-                    unfocusedBorderColor = GreenBar,
-                    focusedLabelColor = GreenBar,
-                    unfocusedLabelColor = GreenBar,
-                    cursorColor = GreenBar,
-                    focusedTextColor = MaterialTheme.colorScheme.onBackground,
-                    unfocusedTextColor = MaterialTheme.colorScheme.onBackground
+                    focusedBorderColor = MaterialTheme.colorScheme.outline,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                    focusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    cursorColor = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             )
 
             Text(
                 text = "Kategori Produk",
                 style = MaterialTheme.typography.titleLarge,
-                color = MaterialTheme.colorScheme.onBackground,
-                modifier = Modifier.padding(all = 16.dp)
+                modifier = Modifier.padding(16.dp)
             )
 
-            // Langkah 6: items memakai parameter categories
             LazyRow(
                 contentPadding = PaddingValues(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                lazyRowItems(categories) { category ->
+                items(categories) { category ->
                     CategoryItem(
                         category = category,
                         isSelected = category.id == selectedCategoryId,
@@ -212,50 +218,36 @@ fun StatelessDaftarProduct(
             Text(
                 text = "Daftar Produk",
                 style = MaterialTheme.typography.titleLarge,
-                color = MaterialTheme.colorScheme.onBackground,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
             )
 
-            // Langkah 7: blok pengkondisian tampilan
             if (isLoading) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        CircularProgressIndicator(color = GreenBar)
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = "Mencari data...",
-                            color = MaterialTheme.colorScheme.onBackground
-                        )
-                    }
+                    CircularProgressIndicator(color = GreenBar)
+                }
+            } else if (products.isEmpty()) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("Produk tidak ditemukan.")
                 }
             } else {
-                if (products.isEmpty()) {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "Produk tidak ditemukan.",
-                            color = MaterialTheme.colorScheme.onBackground
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(2),
+                    contentPadding = PaddingValues(16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    items(products) { product ->
+                        ProductItemCard(
+                            product = product,
+                            onClick = { onProductClick(product) }
                         )
-                    }
-                } else {
-                    // Langkah 8 & 9: LazyVerticalGrid di dalam blok else
-                    LazyVerticalGrid(
-                        columns = GridCells.Fixed(count = 2),
-                        contentPadding = PaddingValues(all = 16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp),
-                        modifier = Modifier.fillMaxSize()
-                    ) {
-                        items(products) { product ->
-                            ProductItemCard(product = product) {
-                                onProductClick(product)
-                            }
-                        }
                     }
                 }
             }
@@ -263,41 +255,155 @@ fun StatelessDaftarProduct(
     }
 }
 
-@Preview(showBackground = true)
+// Sample data kategori
+private val sampleCategories = listOf(
+    Category(id = 1, name = "Makanan", description = "Aneka makanan ringan", products_count = 4),
+    Category(id = 2, name = "Minuman", description = "Aneka minuman segar", products_count = 2),
+    Category(id = 3, name = "Kerajinan", description = "Aneka kerajinan tangan", products_count = 1)
+)
+
+// Sample data produk
+private val sampleProducts = listOf(
+    Product(
+        id = 1,
+        name = "Kripik Singkong",
+        price = 15000.0,
+        category_id = 1,
+        img = "dummy_product",
+        description = "Kripik gurih renyah",
+        stock = 50,
+        category = sampleCategories[0]
+    ),
+    Product(
+        id = 2,
+        name = "Mendoan",
+        price = 10000.0,
+        category_id = 1,
+        img = "dummy_product",
+        description = "Mendoan hangat",
+        stock = 30,
+        category = sampleCategories[0]
+    ),
+    Product(
+        id = 3,
+        name = "Sale Pisang",
+        price = 20000.0,
+        category_id = 1,
+        img = "dummy_product",
+        description = "Sale pisang manis",
+        stock = 20,
+        category = sampleCategories[0]
+    ),
+    Product(
+        id = 4,
+        name = "Getuk Goreng",
+        price = 10000.0,
+        category_id = 1,
+        img = "dummy_product",
+        description = "Getuk goreng gurih",
+        stock = 15,
+        category = sampleCategories[0]
+    ),
+    Product(
+        id = 5,
+        name = "Es Teh Manis",
+        price = 5000.0,
+        category_id = 2,
+        img = "dummy_product",
+        description = "Es teh segar",
+        stock = 100,
+        category = sampleCategories[1]
+    ),
+    Product(
+        id = 6,
+        name = "Es Jeruk",
+        price = 7000.0,
+        category_id = 2,
+        img = "dummy_product",
+        description = "Es jeruk peras",
+        stock = 80,
+        category = sampleCategories[1]
+    ),
+    Product(
+        id = 7,
+        name = "Anyaman Bambu",
+        price = 35000.0,
+        category_id = 3,
+        img = "dummy_product",
+        description = "Anyaman bambu halus",
+        stock = 5,
+        category = sampleCategories[2]
+    )
+)
+
+// Preview 1: menampilkan semua produk (semua kategori)
+@Preview(showBackground = true, name = "Daftar Produk - Semua", showSystemUi = true)
 @Composable
-fun PreviewDaftarProductScreen() {
+fun PreviewDaftarProductAll() {
     JualanTheme(darkTheme = false) {
         StatelessDaftarProduct(
-            categories = DummyData.categories,
-            selectedCategoryId = DummyData.categories.firstOrNull()?.id,
+            categories = sampleCategories,
+            selectedCategoryId = 1,
             onCategorySelected = {},
             searchQuery = "",
             onSearchQueryChange = {},
             isLoading = false,
-            products = DummyData.products.filter {
-                it.category_id == DummyData.categories.firstOrNull()?.id
-            },
+            products = sampleProducts,
             onProductClick = {},
             onContactUsClick = {}
         )
     }
 }
 
-// Preview gelap: ini yang disamakan dengan contoh
-@Preview(showBackground = true)
+// Preview 2: filter kategori "Makanan" saja
+@Preview(showBackground = true, name = "Kategori Makanan", showSystemUi = true)
 @Composable
-fun PreviewDaftarProductScreenDark() {
-    JualanTheme(darkTheme = true) {
+fun PreviewDaftarProductMakanan() {
+    JualanTheme(darkTheme = false) {
         StatelessDaftarProduct(
-            categories = DummyData.categories,
-            selectedCategoryId = DummyData.categories.firstOrNull()?.id,
+            categories = sampleCategories,
+            selectedCategoryId = 1,
             onCategorySelected = {},
             searchQuery = "",
             onSearchQueryChange = {},
             isLoading = false,
-            products = DummyData.products.filter {
-                it.category_id == DummyData.categories.firstOrNull()?.id
-            },
+            products = sampleProducts.filter { it.category_id == 1 },
+            onProductClick = {},
+            onContactUsClick = {}
+        )
+    }
+}
+
+// Preview 3: sedang loading
+@Preview(showBackground = true, name = "Loading State", showSystemUi = true)
+@Composable
+fun PreviewDaftarProductLoading() {
+    JualanTheme(darkTheme = false) {
+        StatelessDaftarProduct(
+            categories = emptyList(),
+            selectedCategoryId = null,
+            onCategorySelected = {},
+            searchQuery = "",
+            onSearchQueryChange = {},
+            isLoading = true,
+            products = emptyList(),
+            onProductClick = {},
+            onContactUsClick = {}
+        )
+    }
+}
+@Preview(showBackground = true, name = "Empty State", showSystemUi = true)
+@Composable
+fun PreviewDaftarProductEmpty() {
+    JualanTheme(darkTheme = false) {
+        StatelessDaftarProduct(
+            categories = sampleCategories,
+            selectedCategoryId = 1,
+            onCategorySelected = {},
+            searchQuery = "tidakada",
+            onSearchQueryChange = {},
+            isLoading = false,
+            products = emptyList(),
             onProductClick = {},
             onContactUsClick = {}
         )

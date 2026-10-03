@@ -9,11 +9,11 @@ data class Category(
 
 data class Product(
     val id: Int,
-    val category_id: Int,
-    val category: Category?,
+    val category_id: Int = 0,
+    val category: Category? = null,
     val name: String,
-    val description: String?,
+    val description: String? = null,
     val price: Double,
-    val stock: Int,
-    val img: String
+    val stock: Int = 0,
+    val img: String = "dummy_product"
 )
